@@ -55,10 +55,13 @@ class ChatController extends ChangeNotifier {
   String? _erro;
   String? get erro => _erro;
 
-  StreamSubscription<Incoming>? _inbox;
+  StreamSubscription<IncomingMessage>? _inbox;
+  StreamSubscription<DeliveryReceipt>? _receipts;
   StreamSubscription<PresenceEvent>? _presence;
 
-  /// Inicializa: registra a fila (req 7), entra online e acompanha presença.
+  /// Inicializa: registra a fila (req 7), acompanha recibos e presença, e entra
+  /// online. Os streams de recibo e presença ficam abertos durante toda a
+  /// sessão (independentes do estado on/off).
   Future<void> init() async {
     final reply = await client.register(name);
     if (!reply.ok) {
@@ -66,6 +69,7 @@ class ChatController extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    _watchReceipts();
     _watchPresence();
     await setOnline(true);
   }
@@ -97,6 +101,16 @@ class ChatController extends ChangeNotifier {
   void selectContact(String contactName) {
     _selected = contactName;
     notifyListeners();
+  }
+
+  // ------------------------------------------------------------ recibos
+
+  /// Stream dedicado aos recibos de entrega das minhas mensagens.
+  void _watchReceipts() {
+    _receipts = client.watchReceipts(name).listen(
+      _aoReceberRecibo,
+      onError: (_) {},
+    );
   }
 
   // ------------------------------------------------------------ presença
@@ -134,11 +148,11 @@ class ChatController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Req 3: abre o stream de entrada. O servidor entrega o que estava na fila
-  /// offline (replay) e depois as mensagens ao vivo.
+  /// Req 3: abre o stream de mensagens recebidas. O servidor entrega o que
+  /// estava na fila offline (replay) e depois as mensagens ao vivo.
   void _abrirInbox() {
-    _inbox = client.subscribe(name).listen(
-      _aoReceber,
+    _inbox = client.receiveMessages(name).listen(
+      (incoming) => _aoReceberMensagem(incoming.message, incoming.fromQueue),
       onError: (e) {
         _erro = 'Conexão com o servidor perdida: $e';
         _online = false;
@@ -149,17 +163,6 @@ class ChatController extends ChangeNotifier {
         notifyListeners();
       },
     );
-  }
-
-  void _aoReceber(Incoming incoming) {
-    switch (incoming.whichEvent()) {
-      case Incoming_Event.message:
-        _aoReceberMensagem(incoming.message, incoming.fromQueue);
-      case Incoming_Event.receipt:
-        _aoReceberRecibo(incoming.receipt);
-      case Incoming_Event.notSet:
-        break;
-    }
   }
 
   void _aoReceberMensagem(ChatMessage m, bool fromQueue) {
@@ -235,6 +238,7 @@ class ChatController extends ChangeNotifier {
   @override
   void dispose() {
     _inbox?.cancel();
+    _receipts?.cancel();
     _presence?.cancel();
     client.shutdown();
     super.dispose();

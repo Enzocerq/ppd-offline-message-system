@@ -53,10 +53,10 @@ void main() {
     expect((await ana.register(RegisterRequest(name: anaNome))).ok, isTrue);
     expect((await bruno.register(RegisterRequest(name: brunoNome))).ok, isTrue);
 
-    // ana fica online para poder receber o recibo de entrega.
-    final anaRecebidas = <Incoming>[];
-    final subAna =
-        ana.subscribe(SubscribeRequest(name: anaNome)).listen(anaRecebidas.add);
+    // ana abre o stream de recibos para ser avisada das entregas.
+    final anaRecibos = <DeliveryReceipt>[];
+    final subRecibos =
+        ana.watchReceipts(SubscribeRequest(name: anaNome)).listen(anaRecibos.add);
     await Future<void>.delayed(const Duration(milliseconds: 200));
 
     // Req 6: bruno offline -> mensagem é enfileirada.
@@ -65,24 +65,21 @@ void main() {
     expect(r1.queuedId, isNotEmpty, reason: 'deve retornar o id da fila');
 
     // Req 3/4: bruno fica online -> recebe o que estava na fila (drain).
-    final recebidas = <Incoming>[];
-    final sub =
-        bruno.subscribe(SubscribeRequest(name: brunoNome)).listen(recebidas.add);
+    final recebidas = <IncomingMessage>[];
+    final sub = bruno
+        .receiveMessages(SubscribeRequest(name: brunoNome))
+        .listen(recebidas.add);
     await Future<void>.delayed(const Duration(milliseconds: 800));
 
     expect(
-      recebidas.any((i) =>
-          i.hasMessage() && i.fromQueue && i.message.text == 'offline-1'),
+      recebidas.any((i) => i.fromQueue && i.message.text == 'offline-1'),
       isTrue,
       reason: 'mensagem da fila deve ser reentregue ao ficar online',
     );
 
     // Recibo: ana deve ser avisada de que a mensagem enfileirada foi entregue.
     expect(
-      anaRecebidas.any((i) =>
-          i.hasReceipt() &&
-          i.receipt.queuedId == r1.queuedId &&
-          i.receipt.to == brunoNome),
+      anaRecibos.any((r) => r.queuedId == r1.queuedId && r.to == brunoNome),
       isTrue,
       reason: 'remetente deve receber o recibo de entrega',
     );
@@ -93,13 +90,12 @@ void main() {
     expect(r2.queued, isFalse, reason: 'destinatário online não enfileira');
     await Future<void>.delayed(const Duration(milliseconds: 400));
     expect(
-      recebidas.any((i) =>
-          i.hasMessage() && !i.fromQueue && i.message.text == 'live-1'),
+      recebidas.any((i) => !i.fromQueue && i.message.text == 'live-1'),
       isTrue,
       reason: 'entrega instantânea ao contato online',
     );
 
-    await subAna.cancel();
+    await subRecibos.cancel();
     await sub.cancel();
     await canalA.shutdown();
     await canalB.shutdown();

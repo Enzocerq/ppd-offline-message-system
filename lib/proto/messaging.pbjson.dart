@@ -98,9 +98,9 @@ final $typed_data.Uint8List deliveryReceiptDescriptor = $convert.base64Decode(
     'Cg9EZWxpdmVyeVJlY2VpcHQSGwoJcXVldWVkX2lkGAEgASgJUghxdWV1ZWRJZBIOCgJ0bxgCIA'
     'EoCVICdG8=');
 
-@$core.Deprecated('Use incomingDescriptor instead')
-const Incoming$json = {
-  '1': 'Incoming',
+@$core.Deprecated('Use incomingMessageDescriptor instead')
+const IncomingMessage$json = {
+  '1': 'IncomingMessage',
   '2': [
     {
       '1': 'message',
@@ -108,30 +108,16 @@ const Incoming$json = {
       '4': 1,
       '5': 11,
       '6': '.mensageria.ChatMessage',
-      '9': 0,
       '10': 'message'
     },
-    {
-      '1': 'receipt',
-      '3': 2,
-      '4': 1,
-      '5': 11,
-      '6': '.mensageria.DeliveryReceipt',
-      '9': 0,
-      '10': 'receipt'
-    },
-    {'1': 'from_queue', '3': 3, '4': 1, '5': 8, '10': 'fromQueue'},
-  ],
-  '8': [
-    {'1': 'event'},
+    {'1': 'from_queue', '3': 2, '4': 1, '5': 8, '10': 'fromQueue'},
   ],
 };
 
-/// Descriptor for `Incoming`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List incomingDescriptor = $convert.base64Decode(
-    'CghJbmNvbWluZxIzCgdtZXNzYWdlGAEgASgLMhcubWVuc2FnZXJpYS5DaGF0TWVzc2FnZUgAUg'
-    'dtZXNzYWdlEjcKB3JlY2VpcHQYAiABKAsyGy5tZW5zYWdlcmlhLkRlbGl2ZXJ5UmVjZWlwdEgA'
-    'UgdyZWNlaXB0Eh0KCmZyb21fcXVldWUYAyABKAhSCWZyb21RdWV1ZUIHCgVldmVudA==');
+/// Descriptor for `IncomingMessage`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List incomingMessageDescriptor = $convert.base64Decode(
+    'Cg9JbmNvbWluZ01lc3NhZ2USMQoHbWVzc2FnZRgBIAEoCzIXLm1lbnNhZ2VyaWEuQ2hhdE1lc3'
+    'NhZ2VSB21lc3NhZ2USHQoKZnJvbV9xdWV1ZRgCIAEoCFIJZnJvbVF1ZXVl');
 
 @$core.Deprecated('Use presenceEventDescriptor instead')
 const PresenceEvent$json = {

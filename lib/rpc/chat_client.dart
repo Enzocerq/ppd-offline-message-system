@@ -44,9 +44,14 @@ class ChatClient {
     return _stub.sendMessage(msg);
   }
 
-  /// Req 3: stream de entrada. Abrir = ficar online (dispara o drain da fila).
-  ResponseStream<Incoming> subscribe(String name) =>
-      _stub.subscribe(SubscribeRequest(name: name));
+  /// Req 3: stream de mensagens recebidas. Abrir = ficar online (dispara o
+  /// drain da fila offline).
+  ResponseStream<IncomingMessage> receiveMessages(String name) =>
+      _stub.receiveMessages(SubscribeRequest(name: name));
+
+  /// Stream dedicado aos recibos de entrega das minhas mensagens.
+  ResponseStream<DeliveryReceipt> watchReceipts(String name) =>
+      _stub.watchReceipts(SubscribeRequest(name: name));
 
   /// Stream de presença dos demais clientes (GUI).
   ResponseStream<PresenceEvent> watchPresence(String name) =>

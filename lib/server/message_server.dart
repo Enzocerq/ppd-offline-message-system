@@ -15,6 +15,9 @@ import '../proto/messaging.pbgrpc.dart';
 /// retida em `mom/inbox/<destinatário>/<id>` (req 6). Quando o cliente fica
 /// online, o servidor assina a fila dele, reentrega o acumulado e apaga os
 /// itens (drain).
+///
+/// Cada operação é um método RPC distinto e cada stream carrega um único tipo
+/// concreto — não há mensagem "coringa" com `oneof` nem `switch` de roteamento.
 class MessageServer extends MessageServiceBase {
   MessageServer(this._mqtt, {this.onLog}) {
     // Único ponto de escuta do MOM: roteia cada item de fila reentregue para o
@@ -28,15 +31,17 @@ class MessageServer extends MessageServiceBase {
   /// Clientes que pediram criação de fila (req 7).
   final Set<String> _registrados = {};
 
-  /// Clientes online: nome -> sink do stream `Subscribe`.
-  final Map<String, StreamController<Incoming>> _online = {};
+  /// Clientes online: nome -> sink do stream `ReceiveMessages`.
+  final Map<String, StreamController<IncomingMessage>> _online = {};
+
+  /// Sinks do stream `WatchReceipts`: nome do remetente -> sink de recibos.
+  final Map<String, StreamController<DeliveryReceipt>> _recibos = {};
 
   /// Assinantes de presença (GUI).
   final List<StreamController<PresenceEvent>> _watchers = [];
 
-  /// Recibos de entrega que ainda não foram entregues ao remetente porque ele
-  /// estava offline na hora. Chave = nome do remetente. São esvaziados quando
-  /// o remetente volta a ficar online.
+  /// Recibos que não puderam ser entregues porque o remetente não tinha um
+  /// stream de recibos aberto (app fechado). Esvaziados quando ele reabre.
   final Map<String, List<DeliveryReceipt>> _recibosPendentes = {};
 
   /// Gera ids únicos e monotônicos para os itens de fila, mesmo entre
@@ -69,7 +74,7 @@ class MessageServer extends MessageServiceBase {
 
     if (sink != null) {
       // Destinatário online: entrega instantânea pelo stream gRPC (req 3).
-      sink.add(Incoming(message: request, fromQueue: false));
+      sink.add(IncomingMessage(message: request, fromQueue: false));
       _log('Entregue ao vivo: ${request.from} -> $destino.');
       return SendReply(ok: true, queued: false);
     }
@@ -89,9 +94,10 @@ class MessageServer extends MessageServiceBase {
   /// presença, assina a fila do cliente (o broker reentrega o acumulado) e
   /// mantém o stream aberto para as mensagens ao vivo.
   @override
-  Stream<Incoming> subscribe(ServiceCall call, SubscribeRequest request) {
+  Stream<IncomingMessage> receiveMessages(
+      ServiceCall call, SubscribeRequest request) {
     final nome = request.name.trim();
-    final controller = StreamController<Incoming>();
+    final controller = StreamController<IncomingMessage>();
 
     // Substitui um stream anterior do mesmo nome, se houver.
     _online[nome]?.close();
@@ -103,14 +109,6 @@ class MessageServer extends MessageServiceBase {
     // Assinar o curinga dispara a reentrega das mensagens retidas (a fila).
     _mqtt.subscribe(Topics.inboxWildcard(nome));
 
-    // Entrega os recibos que chegaram enquanto este cliente estava offline.
-    final pendentes = _recibosPendentes.remove(nome);
-    if (pendentes != null) {
-      for (final recibo in pendentes) {
-        controller.add(Incoming(receipt: recibo));
-      }
-    }
-
     controller.onCancel = () {
       _mqtt.unsubscribe(Topics.inboxWildcard(nome));
       if (identical(_online[nome], controller)) {
@@ -120,6 +118,30 @@ class MessageServer extends MessageServiceBase {
       }
     };
 
+    return controller.stream;
+  }
+
+  /// Stream dedicado aos recibos de entrega das mensagens que o cliente enviou.
+  @override
+  Stream<DeliveryReceipt> watchReceipts(
+      ServiceCall call, SubscribeRequest request) {
+    final nome = request.name.trim();
+    final controller = StreamController<DeliveryReceipt>();
+
+    _recibos[nome]?.close();
+    _recibos[nome] = controller;
+
+    // Entrega recibos acumulados enquanto o cliente estava sem stream aberto.
+    final pendentes = _recibosPendentes.remove(nome);
+    if (pendentes != null) {
+      for (final recibo in pendentes) {
+        controller.add(recibo);
+      }
+    }
+
+    controller.onCancel = () {
+      if (identical(_recibos[nome], controller)) _recibos.remove(nome);
+    };
     return controller.stream;
   }
 
@@ -150,7 +172,7 @@ class MessageServer extends MessageServiceBase {
     if (sink == null) return; // só entrega se o destinatário estiver online
 
     final chat = ChatCodec.decode(msg.payload);
-    sink.add(Incoming(message: chat, fromQueue: true));
+    sink.add(IncomingMessage(message: chat, fromQueue: true));
 
     // Item entregue: remove da fila apagando a mensagem retida.
     _mqtt.deleteRetained(msg.topico);
@@ -161,12 +183,12 @@ class MessageServer extends MessageServiceBase {
     if (id != null) _notificarEntrega(chat.from, id, destino);
   }
 
-  /// Entrega um recibo ao remetente; se ele estiver offline, guarda para depois.
+  /// Entrega um recibo ao remetente; se ele não tiver stream aberto, guarda.
   void _notificarEntrega(String remetente, String queuedId, String destino) {
     final recibo = DeliveryReceipt(queuedId: queuedId, to: destino);
-    final sink = _online[remetente];
+    final sink = _recibos[remetente];
     if (sink != null) {
-      sink.add(Incoming(receipt: recibo));
+      sink.add(recibo);
     } else {
       (_recibosPendentes[remetente] ??= []).add(recibo);
     }

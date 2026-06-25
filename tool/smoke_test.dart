@@ -52,14 +52,14 @@ Future<void> main() async {
     check(r1.queued, 'mensagem para contato offline foi enfileirada (req 6)');
 
     // Req 3/4: bruno fica ONLINE -> deve receber o que estava na fila (drain).
-    final recebidas = <Incoming>[];
-    final sub = bruno.subscribe(SubscribeRequest(name: 'bruno')).listen(
+    final recebidas = <IncomingMessage>[];
+    final sub = bruno.receiveMessages(SubscribeRequest(name: 'bruno')).listen(
       recebidas.add,
       onError: (_) {},
     );
 
     await Future<void>.delayed(const Duration(milliseconds: 800));
-    final replay = recebidas.where((i) => i.hasMessage() && i.fromQueue).toList();
+    final replay = recebidas.where((i) => i.fromQueue).toList();
     check(
       replay.any((i) => i.message.text == 'mensagem offline'),
       'fila esvaziada ao ficar online (req 4) — recebeu replay',
@@ -72,8 +72,7 @@ Future<void> main() async {
 
     await Future<void>.delayed(const Duration(milliseconds: 500));
     check(
-      recebidas.any((i) =>
-          i.hasMessage() && !i.fromQueue && i.message.text == 'mensagem ao vivo'),
+      recebidas.any((i) => !i.fromQueue && i.message.text == 'mensagem ao vivo'),
       'entrega instantânea ao contato online (req 3)',
     );
 

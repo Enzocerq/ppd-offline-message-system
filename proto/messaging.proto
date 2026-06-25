@@ -13,11 +13,13 @@ service MessageService {
   // instantaneamente; se estiver offline vai para a fila MOM dele.
   rpc SendMessage(ChatMessage) returns (SendReply);
 
-  // Req 3: stream de entrada do cliente. Ao abrir (= ficar online), o servidor
+  // Req 3: stream de mensagens recebidas. Ao abrir (= ficar online), o servidor
   // primeiro esvazia a fila offline e depois entrega as mensagens ao vivo.
-  // O mesmo stream também leva os recibos de entrega das mensagens que ESTE
-  // cliente mandou para contatos que estavam offline.
-  rpc Subscribe(SubscribeRequest) returns (stream Incoming);
+  rpc ReceiveMessages(SubscribeRequest) returns (stream IncomingMessage);
+
+  // Recibos de entrega das mensagens que ESTE cliente mandou para contatos que
+  // estavam offline (stream próprio, com um único tipo).
+  rpc WatchReceipts(SubscribeRequest) returns (stream DeliveryReceipt);
 
   // GUI: acompanha o status on/off dos demais clientes.
   rpc WatchPresence(SubscribeRequest) returns (stream PresenceEvent);
@@ -56,12 +58,10 @@ message DeliveryReceipt {
   string to = 2;        // destinatário que recebeu
 }
 
-message Incoming {
-  oneof event {
-    ChatMessage message = 1;     // mensagem recebida de um contato
-    DeliveryReceipt receipt = 2; // recibo: uma msg que EU enviei (e estava na fila) foi entregue
-  }
-  bool from_queue = 3; // (para message) true => replay de uma mensagem que estava na fila offline
+// Mensagem entregue ao destinatário pelo stream ReceiveMessages.
+message IncomingMessage {
+  ChatMessage message = 1;
+  bool from_queue = 2; // true => replay de uma mensagem que estava na fila offline
 }
 
 message PresenceEvent {

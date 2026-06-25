@@ -34,7 +34,7 @@ Os clientes falam **somente gRPC** com o servidor; só o **servidor** fala com o
 ```
 
 **Fluxo de uma mensagem (ana → bruno):**
-- **bruno online** (com o stream `Subscribe` aberto) → o servidor entrega na hora pelo stream gRPC do
+- **bruno online** (com o stream `ReceiveMessages` aberto) → o servidor entrega na hora pelo stream gRPC do
   bruno (req 3). `SendReply.queued = false`.
 - **bruno offline** → o servidor publica a mensagem como **mensagem retida** em
   `mom/inbox/bruno/<id>` (req 6). `SendReply.queued = true`.
@@ -42,8 +42,13 @@ Os clientes falam **somente gRPC** com o servidor; só o **servidor** fala com o
   acumulado (a fila), o servidor repassa ao bruno (marcado como *recebida da fila*) e **apaga** cada
   mensagem retida (req 4/7).
 
-O **botão on/off** (req 2) simplesmente abre/fecha o stream `Subscribe`: offline ⇒ sem stream ⇒ o
+O **botão on/off** (req 2) simplesmente abre/fecha o stream `ReceiveMessages`: offline ⇒ sem stream ⇒ o
 servidor enfileira no MOM; online ⇒ stream aberto ⇒ esvazia a fila + entrega ao vivo.
+
+> **Desenho do contrato:** cada operação é um **método RPC distinto** (`Register`, `SendMessage`,
+> `ReceiveMessages`, `WatchReceipts`, `WatchPresence`) e **cada stream carrega um único tipo concreto**.
+> Não há uma mensagem "coringa" com `oneof` nem `switch` de roteamento — quem despacha cada operação é o
+> próprio gRPC pelo nome do método.
 
 > Por que filas como *mensagens retidas*: é simples, confiável, visível (dá para inspecionar com
 > `mosquitto_sub -t "mom/inbox/#" -v`), guarda várias mensagens e, com `persistence true`, sobrevive a
@@ -98,7 +103,7 @@ servidor enfileira no MOM; online ⇒ stream aberto ⇒ esvazia a fila + entrega
 ## Estrutura do código
 
 ```
-proto/messaging.proto          Contrato gRPC (Register, SendMessage, Subscribe, WatchPresence)
+proto/messaging.proto          Contrato gRPC (Register, SendMessage, ReceiveMessages, WatchReceipts, WatchPresence)
 broker/mosquitto.conf          Configuração do broker MQTT (MOM) para a demo
 lib/
   main.dart                    Entrada do app (seletor de papel)
@@ -143,9 +148,10 @@ flutter test test/end_to_end_test.dart
 
 Quando uma mensagem é enfileirada para um contato offline, o remetente vê "na fila (offline)".
 Assim que o destinatário fica online e o servidor esvazia a fila dele, o servidor envia um
-**recibo de entrega** (`DeliveryReceipt`) de volta ao remetente pelo seu próprio stream `Subscribe`,
+**recibo de entrega** (`DeliveryReceipt`) ao remetente pelo stream dedicado `WatchReceipts`,
 casando pelo `queued_id` retornado no `SendReply`. A bolha do remetente então muda para "entregue".
-Se o remetente estiver offline nesse momento, o recibo fica guardado e é entregue quando ele volta.
+Se o remetente não tiver o stream aberto nesse momento, o recibo fica guardado e é entregue quando ele
+reabre.
 
 ## Observações
 

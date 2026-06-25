@@ -426,71 +426,54 @@ class DeliveryReceipt extends $pb.GeneratedMessage {
   void clearTo() => $_clearField(2);
 }
 
-enum Incoming_Event { message, receipt, notSet }
-
-class Incoming extends $pb.GeneratedMessage {
-  factory Incoming({
+/// Mensagem entregue ao destinatário pelo stream ReceiveMessages.
+class IncomingMessage extends $pb.GeneratedMessage {
+  factory IncomingMessage({
     ChatMessage? message,
-    DeliveryReceipt? receipt,
     $core.bool? fromQueue,
   }) {
     final result = create();
     if (message != null) result.message = message;
-    if (receipt != null) result.receipt = receipt;
     if (fromQueue != null) result.fromQueue = fromQueue;
     return result;
   }
 
-  Incoming._();
+  IncomingMessage._();
 
-  factory Incoming.fromBuffer($core.List<$core.int> data,
+  factory IncomingMessage.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromBuffer(data, registry);
-  factory Incoming.fromJson($core.String json,
+  factory IncomingMessage.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
       create()..mergeFromJson(json, registry);
 
-  static const $core.Map<$core.int, Incoming_Event> _Incoming_EventByTag = {
-    1: Incoming_Event.message,
-    2: Incoming_Event.receipt,
-    0: Incoming_Event.notSet
-  };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
-      _omitMessageNames ? '' : 'Incoming',
+      _omitMessageNames ? '' : 'IncomingMessage',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'mensageria'),
       createEmptyInstance: create)
-    ..oo(0, [1, 2])
     ..aOM<ChatMessage>(1, _omitFieldNames ? '' : 'message',
         subBuilder: ChatMessage.create)
-    ..aOM<DeliveryReceipt>(2, _omitFieldNames ? '' : 'receipt',
-        subBuilder: DeliveryReceipt.create)
-    ..aOB(3, _omitFieldNames ? '' : 'fromQueue')
+    ..aOB(2, _omitFieldNames ? '' : 'fromQueue')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  Incoming clone() => deepCopy();
+  IncomingMessage clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  Incoming copyWith(void Function(Incoming) updates) =>
-      super.copyWith((message) => updates(message as Incoming)) as Incoming;
+  IncomingMessage copyWith(void Function(IncomingMessage) updates) =>
+      super.copyWith((message) => updates(message as IncomingMessage))
+          as IncomingMessage;
 
   @$core.override
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
-  static Incoming create() => Incoming._();
+  static IncomingMessage create() => IncomingMessage._();
   @$core.override
-  Incoming createEmptyInstance() => create();
+  IncomingMessage createEmptyInstance() => create();
   @$core.pragma('dart2js:noInline')
-  static Incoming getDefault() =>
-      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Incoming>(create);
-  static Incoming? _defaultInstance;
-
-  @$pb.TagNumber(1)
-  @$pb.TagNumber(2)
-  Incoming_Event whichEvent() => _Incoming_EventByTag[$_whichOneof(0)]!;
-  @$pb.TagNumber(1)
-  @$pb.TagNumber(2)
-  void clearEvent() => $_clearField($_whichOneof(0));
+  static IncomingMessage getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<IncomingMessage>(create);
+  static IncomingMessage? _defaultInstance;
 
   @$pb.TagNumber(1)
   ChatMessage get message => $_getN(0);
@@ -504,24 +487,13 @@ class Incoming extends $pb.GeneratedMessage {
   ChatMessage ensureMessage() => $_ensure(0);
 
   @$pb.TagNumber(2)
-  DeliveryReceipt get receipt => $_getN(1);
+  $core.bool get fromQueue => $_getBF(1);
   @$pb.TagNumber(2)
-  set receipt(DeliveryReceipt value) => $_setField(2, value);
+  set fromQueue($core.bool value) => $_setBool(1, value);
   @$pb.TagNumber(2)
-  $core.bool hasReceipt() => $_has(1);
+  $core.bool hasFromQueue() => $_has(1);
   @$pb.TagNumber(2)
-  void clearReceipt() => $_clearField(2);
-  @$pb.TagNumber(2)
-  DeliveryReceipt ensureReceipt() => $_ensure(1);
-
-  @$pb.TagNumber(3)
-  $core.bool get fromQueue => $_getBF(2);
-  @$pb.TagNumber(3)
-  set fromQueue($core.bool value) => $_setBool(2, value);
-  @$pb.TagNumber(3)
-  $core.bool hasFromQueue() => $_has(2);
-  @$pb.TagNumber(3)
-  void clearFromQueue() => $_clearField(3);
+  void clearFromQueue() => $_clearField(2);
 }
 
 class PresenceEvent extends $pb.GeneratedMessage {

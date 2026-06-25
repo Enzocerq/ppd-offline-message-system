@@ -52,16 +52,25 @@ class MessageServiceClient extends $grpc.Client {
     return $createUnaryCall(_$sendMessage, request, options: options);
   }
 
-  /// Req 3: stream de entrada do cliente. Ao abrir (= ficar online), o servidor
+  /// Req 3: stream de mensagens recebidas. Ao abrir (= ficar online), o servidor
   /// primeiro esvazia a fila offline e depois entrega as mensagens ao vivo.
-  /// O mesmo stream também leva os recibos de entrega das mensagens que ESTE
-  /// cliente mandou para contatos que estavam offline.
-  $grpc.ResponseStream<$0.Incoming> subscribe(
+  $grpc.ResponseStream<$0.IncomingMessage> receiveMessages(
     $0.SubscribeRequest request, {
     $grpc.CallOptions? options,
   }) {
     return $createStreamingCall(
-        _$subscribe, $async.Stream.fromIterable([request]),
+        _$receiveMessages, $async.Stream.fromIterable([request]),
+        options: options);
+  }
+
+  /// Recibos de entrega das mensagens que ESTE cliente mandou para contatos que
+  /// estavam offline (stream próprio, com um único tipo).
+  $grpc.ResponseStream<$0.DeliveryReceipt> watchReceipts(
+    $0.SubscribeRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createStreamingCall(
+        _$watchReceipts, $async.Stream.fromIterable([request]),
         options: options);
   }
 
@@ -86,11 +95,16 @@ class MessageServiceClient extends $grpc.Client {
       '/mensageria.MessageService/SendMessage',
       ($0.ChatMessage value) => value.writeToBuffer(),
       $0.SendReply.fromBuffer);
-  static final _$subscribe =
-      $grpc.ClientMethod<$0.SubscribeRequest, $0.Incoming>(
-          '/mensageria.MessageService/Subscribe',
+  static final _$receiveMessages =
+      $grpc.ClientMethod<$0.SubscribeRequest, $0.IncomingMessage>(
+          '/mensageria.MessageService/ReceiveMessages',
           ($0.SubscribeRequest value) => value.writeToBuffer(),
-          $0.Incoming.fromBuffer);
+          $0.IncomingMessage.fromBuffer);
+  static final _$watchReceipts =
+      $grpc.ClientMethod<$0.SubscribeRequest, $0.DeliveryReceipt>(
+          '/mensageria.MessageService/WatchReceipts',
+          ($0.SubscribeRequest value) => value.writeToBuffer(),
+          $0.DeliveryReceipt.fromBuffer);
   static final _$watchPresence =
       $grpc.ClientMethod<$0.SubscribeRequest, $0.PresenceEvent>(
           '/mensageria.MessageService/WatchPresence',
@@ -117,13 +131,20 @@ abstract class MessageServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.ChatMessage.fromBuffer(value),
         ($0.SendReply value) => value.writeToBuffer()));
-    $addMethod($grpc.ServiceMethod<$0.SubscribeRequest, $0.Incoming>(
-        'Subscribe',
-        subscribe_Pre,
+    $addMethod($grpc.ServiceMethod<$0.SubscribeRequest, $0.IncomingMessage>(
+        'ReceiveMessages',
+        receiveMessages_Pre,
         false,
         true,
         ($core.List<$core.int> value) => $0.SubscribeRequest.fromBuffer(value),
-        ($0.Incoming value) => value.writeToBuffer()));
+        ($0.IncomingMessage value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.SubscribeRequest, $0.DeliveryReceipt>(
+        'WatchReceipts',
+        watchReceipts_Pre,
+        false,
+        true,
+        ($core.List<$core.int> value) => $0.SubscribeRequest.fromBuffer(value),
+        ($0.DeliveryReceipt value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$0.SubscribeRequest, $0.PresenceEvent>(
         'WatchPresence',
         watchPresence_Pre,
@@ -149,12 +170,20 @@ abstract class MessageServiceBase extends $grpc.Service {
   $async.Future<$0.SendReply> sendMessage(
       $grpc.ServiceCall call, $0.ChatMessage request);
 
-  $async.Stream<$0.Incoming> subscribe_Pre($grpc.ServiceCall $call,
+  $async.Stream<$0.IncomingMessage> receiveMessages_Pre($grpc.ServiceCall $call,
       $async.Future<$0.SubscribeRequest> $request) async* {
-    yield* subscribe($call, await $request);
+    yield* receiveMessages($call, await $request);
   }
 
-  $async.Stream<$0.Incoming> subscribe(
+  $async.Stream<$0.IncomingMessage> receiveMessages(
+      $grpc.ServiceCall call, $0.SubscribeRequest request);
+
+  $async.Stream<$0.DeliveryReceipt> watchReceipts_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.SubscribeRequest> $request) async* {
+    yield* watchReceipts($call, await $request);
+  }
+
+  $async.Stream<$0.DeliveryReceipt> watchReceipts(
       $grpc.ServiceCall call, $0.SubscribeRequest request);
 
   $async.Stream<$0.PresenceEvent> watchPresence_Pre($grpc.ServiceCall $call,
