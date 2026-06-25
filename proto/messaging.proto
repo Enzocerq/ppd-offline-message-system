@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package mensageria;
+
+// Serviço remoto de mensagens (RPC). Os clientes acessam o servidor de
+// mensagens offline EXCLUSIVAMENTE por estas chamadas — nunca falam com o MOM
+// diretamente.
+service MessageService {
+  // Req 7: ao entrar no sistema, o cliente solicita a criação da sua fila.
+  rpc Register(RegisterRequest) returns (RegisterReply);
+
+  // Req 3 e 6: envia uma mensagem. Se o destinatário estiver online é entregue
+  // instantaneamente; se estiver offline vai para a fila MOM dele.
+  rpc SendMessage(ChatMessage) returns (SendReply);
+
+  // Req 3: stream de entrada do cliente. Ao abrir (= ficar online), o servidor
+  // primeiro esvazia a fila offline e depois entrega as mensagens ao vivo.
+  // O mesmo stream também leva os recibos de entrega das mensagens que ESTE
+  // cliente mandou para contatos que estavam offline.
+  rpc Subscribe(SubscribeRequest) returns (stream Incoming);
+
+  // GUI: acompanha o status on/off dos demais clientes.
+  rpc WatchPresence(SubscribeRequest) returns (stream PresenceEvent);
+}
+
+message RegisterRequest {
+  string name = 1;
+}
+
+message RegisterReply {
+  bool ok = 1;
+  string detail = 2;
+}
+
+message ChatMessage {
+  string from = 1;
+  string to = 2;
+  string text = 3;
+  int64 timestamp = 4; // epoch em milissegundos
+}
+
+message SendReply {
+  bool ok = 1;
+  bool queued = 2; // true => destinatário offline, mensagem foi para a fila MOM
+  string queued_id = 3; // id do item na fila (quando queued=true), para casar com o recibo
+}
+
+message SubscribeRequest {
+  string name = 1;
+}
+
+// Confirmação de que uma mensagem enfileirada foi finalmente entregue ao
+// destinatário (quando ele ficou online).
+message DeliveryReceipt {
+  string queued_id = 1; // id do item de fila entregue
+  string to = 2;        // destinatário que recebeu
+}
+
+message Incoming {
+  oneof event {
+    ChatMessage message = 1;     // mensagem recebida de um contato
+    DeliveryReceipt receipt = 2; // recibo: uma msg que EU enviei (e estava na fila) foi entregue
+  }
+  bool from_queue = 3; // (para message) true => replay de uma mensagem que estava na fila offline
+}
+
+message PresenceEvent {
+  string name = 1;
+  bool online = 2;
+}

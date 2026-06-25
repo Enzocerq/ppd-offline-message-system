@@ -1,0 +1,33 @@
+name: ppd_offline_message_system
+description: "Sistema de troca de mensagens com controle de mensagens offline (RPC + MOM)."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # RPC — servidor remoto de mensagens (igual ao projeto dara-game)
+  grpc: ^5.1.0
+  protobuf: ^6.0.0
+  fixnum: ^1.1.1 # tipo Int64 usado pelos campos int64 do protobuf
+
+  # MOM — fila de mensagens offline por cliente (igual ao projeto mom-project-ppd)
+  mqtt_client: ^10.11.11
+
+  # Estado reativo da UI
+  provider: ^6.1.5+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
